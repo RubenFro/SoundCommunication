@@ -6,106 +6,125 @@ public class SoundPainter : MonoBehaviour
 {
     public AudioSource startEndAudioSource;
     public AudioSource loopAudioSource;
-    public AudioClip[] audioClipSequence;
-    private bool playingSound;
-    private float yAxisStartMouse=-1f;
+
+    // 0 not playing, 1 play start, 2 in loop, 3 in end
+    public int playingPhase = 0;
     private IEnumerator coroutine;
-    public GameObject debugObject;
+    public SoundLoop soundLoop;
 
     // Start is called before the first frame update
     void Start()
     {
-        startEndAudioSource.clip = audioClipSequence[0];
-        loopAudioSource.clip = audioClipSequence[1];
-        HideDebug();
+        startEndAudioSource.clip = soundLoop.start;
+        loopAudioSource.clip = soundLoop.loop;
     }
 
     // Update is called once per frame
     void Update()
     {
+
         if (Input.GetMouseButtonDown(0))
         {
-            if (!playingSound)
+            if (playingPhase == 3)
             {
+                StopCoroutine(coroutine);
+                Reset();
+
+            }
+            if (playingPhase == 0) { 
                 coroutine = PlaySound();
                 StartCoroutine(coroutine);
-                ShowDebug();
             }
            
+
         }
-        else if (Input.GetMouseButtonUp(0))
+        if (Input.GetMouseButton(0) && playingPhase == 2)
         {
-            if (playingSound)
-            {
-                StopSound();
-                Invoke("HideDebug",0.25f);
-            }
-        }
-
-        if (playingSound && loopAudioSource.isPlaying && Input.GetMouseButton(0))
-        {
-                ChangeLoopPitch(Input.GetAxis("Mouse Y"));
-                MoveDebug(Input.GetAxis("Mouse Y"));
+                ChangeLoopPitch(Input.GetAxis("Mouse Y"), Input.GetAxis("Mouse X"));
         }
 
 
     }
-    void ChangeLoopPitch(float pitchAdj)
+    void ChangeLoopPitch(float pitchAdj,float panAdj)
     {
-            loopAudioSource.pitch += pitchAdj*0.01f;
+        loopAudioSource.pitch += pitchAdj*0.1f;
+        loopAudioSource.panStereo += panAdj * 0.1f;
     }
 
-
-    void ShowDebug()
-    {
-        debugObject.SetActive(true);
-
-    }
-    void HideDebug()
-    {
-        debugObject.SetActive(false);
-        ResetDebug();
-    }
-    void MoveDebug(float y)
-    {
-        debugObject.transform.position = new Vector3(debugObject.transform.position.x, debugObject.transform.position.y + y, debugObject.transform.position.z);
-    }
-    void ResetDebug()
-    {
-        debugObject.transform.position = Vector3.zero;
-    }
+ 
     IEnumerator PlaySound()
     {
-        playingSound = true;
-        startEndAudioSource.clip = audioClipSequence[0];
+        PlayStart();
+        yield return new WaitForSeconds(soundLoop.start.length);
+
+        PlayLoop();
+        yield return new WaitWhile(() => Input.GetMouseButton(0));
+
+        PlayEnd();
+        yield return new WaitForSeconds(soundLoop.end.length);
+        Reset();
+    }
+    void Reset()
+    {
+        playingPhase = 0;
+        startEndAudioSource.clip = soundLoop.start;
+        startEndAudioSource.time = 0;
+        startEndAudioSource.pitch = 1;
+        loopAudioSource.volume = 1;
+        loopAudioSource.loop = true;
+        loopAudioSource.panStereo = 0;
+    }
+    void PlayStart()
+    {
+        playingPhase = 1;
+        startEndAudioSource.clip = soundLoop.start;
         startEndAudioSource.time = 0;
         startEndAudioSource.pitch = 1;
         startEndAudioSource.Play();
-        yield return new WaitForSeconds(audioClipSequence[0].length);
+    }
+    void PlayLoop()
+    {
+        playingPhase = 2;
         loopAudioSource.time = 0;
         loopAudioSource.pitch = 1;
         loopAudioSource.Play();
         loopAudioSource.loop = true;
-
     }
-    void StopSound()
+    void PlayEnd()
     {
-        if (playingSound) { 
-            if (startEndAudioSource.isPlaying)
-            {
-                StopCoroutine(coroutine);
-                startEndAudioSource.Stop();
-            }
-            startEndAudioSource.clip = audioClipSequence[2];
-            startEndAudioSource.time = 0;
-            startEndAudioSource.pitch = loopAudioSource.pitch;
-            coroutine = null;
-            if (loopAudioSource.isPlaying) { 
-                loopAudioSource.Stop();
-            }
-            startEndAudioSource.Play();
-            playingSound = false;
-        
-        }
+        StartCoroutine(FadeAudioVolume(loopAudioSource, loopAudioSource.volume, 0, 1));
+        startEndAudioSource.clip = soundLoop.end;
+        startEndAudioSource.time = 0;
+        startEndAudioSource.pitch = loopAudioSource.pitch;
+        startEndAudioSource.Play();
     }
+
+
+    
+    IEnumerator FadeAudioVolume(AudioSource audioSource, float startValue, float toValue, float aTime)
+    {
+        audioSource.volume = (startValue);
+
+        for (float t = 0.0f; t < 1.0f; t += Time.deltaTime / aTime)
+        {
+            audioSource.volume = (Mathf.Lerp(startValue, toValue, t));
+            yield return null;
+        }
+        audioSource.volume = toValue;
+        audioSource.loop = false;
+        audioSource.Stop();
+        playingPhase = 3;
+    }
+
+
+
+
+}
+
+[System.Serializable]
+public struct SoundLoop
+{
+    public AudioClip start;
+    public AudioClip loop;
+    public AudioClip end;
 }

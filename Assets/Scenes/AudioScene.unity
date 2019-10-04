@@ -345,11 +345,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   startEndAudioSource: {fileID: 447082788}
   loopAudioSource: {fileID: 447082787}
-  audioClipSequence:
-  - {fileID: 8300000, guid: e49a5af68d31c43f3acf2c5ba61d0cf0, type: 3}
-  - {fileID: 8300000, guid: 84680fba791ef41d788c576d9742804d, type: 3}
-  - {fileID: 8300000, guid: f23dd445667574cf28800fa16151f02b, type: 3}
+  playingPhase: 0
   debugObject: {fileID: 1491362088}
+  soundLoop:
+    start: {fileID: 8300000, guid: 4aab4c7f907e84b7fac4d9550a9fb16a, type: 3}
+    loop: {fileID: 8300000, guid: 84680fba791ef41d788c576d9742804d, type: 3}
+    end: {fileID: 8300000, guid: 8f77dce0a633e4b7d901f6e15db95bc6, type: 3}
 --- !u!4 &447082790
 Transform:
   m_ObjectHideFlags: 0
